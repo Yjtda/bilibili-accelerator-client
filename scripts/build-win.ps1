@@ -18,7 +18,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $repoRoot 'THIRD_PARTY_NOTICES.md') -Destination $outputDir -Force
     Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination $outputDir -Force
     Copy-Item -LiteralPath (Join-Path $repoRoot 'licenses') -Destination (Join-Path $outputDir 'licenses') -Recurse -Force
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'install-user-shortcut.ps1') -Destination $outputDir -Force
 } finally {
     Pop-Location
 }
-

@@ -18,6 +18,14 @@
 4. 运行 `Bilibili Accelerator Client.exe`。
 5. 打开视频，在播放窗口右下角点击闪电按钮。
 
+如需让桌面的“哔哩哔哩”快捷方式始终启动加速版，可在解压目录运行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install-user-shortcut.ps1
+```
+
+脚本只创建当前 Windows 用户的桌面快捷方式，不修改官方客户端安装文件。
+
 本地生成的程序没有代码签名，Windows 首次运行时可能显示安全提醒。
 
 ## 开发
@@ -45,5 +53,3 @@ npm run build:win
 ## 许可
 
 启动器代码采用 [MIT License](LICENSE)。第三方代码继续适用各自原有许可证。
-
-
