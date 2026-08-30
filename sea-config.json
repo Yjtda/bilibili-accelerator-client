@@ -1,0 +1,9 @@
+{
+  "main": "src/launcher.cjs",
+  "output": "sea-prep.blob",
+  "disableExperimentalSEAWarning": true,
+  "useCodeCache": false,
+  "useSnapshot": false
+}
+
+
