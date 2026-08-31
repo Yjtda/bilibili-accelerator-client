@@ -130,6 +130,13 @@ class PlayerInjector {
     this.connections.set(target.id, connection);
     await connection.send('Page.enable');
     await connection.send('Runtime.enable');
+    // Keep the accelerator installed when player.html reloads from the panel's
+    // Reload action or when the desktop client navigates within the same target.
+    // A CDP target survives those navigations, while its JavaScript world and
+    // DOM do not, so a one-shot Runtime.evaluate is not sufficient.
+    await connection.send('Page.addScriptToEvaluateOnNewDocument', {
+      source: this.injectionSource,
+    });
     await connection.send('Runtime.evaluate', {
       expression: this.injectionSource,
       awaitPromise: true,
@@ -221,4 +228,3 @@ main().catch(error => {
   process.stderr.write('如果客户端已经在运行，请先完全退出后再试。\n');
   process.exitCode = 1;
 });
-
