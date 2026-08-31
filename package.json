@@ -1,6 +1,6 @@
 {
   "name": "bilibili-accelerator-client",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Inject Bilibili Accelerator into the Bilibili Windows desktop client player.",
   "license": "MIT",
@@ -12,5 +12,3 @@
     "postject": "1.0.0-alpha.6"
   }
 }
-
-

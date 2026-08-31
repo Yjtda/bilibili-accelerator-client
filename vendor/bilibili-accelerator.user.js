@@ -771,6 +771,8 @@
     p2pBlocked: 0,
     ranking: [],
     probedAt: null,
+    videoRewriteBaseline: 0,
+    lastVerifiedHost: null,
     installedAt: new Date().toISOString()
   };
 
@@ -999,6 +1001,7 @@
     }
     state.lastSource = source;
     state.rewriteCount += rewrites.length;
+    state.lastVerifiedHost = core.hostOf(rewrites[rewrites.length - 1].url);
     state.rewrites = state.rewrites.concat(rewrites.map(function mapRewrite(item) {
       // Keep only bare host + reason — never the full media URL. Segment URLs
       // carry the viewer's mid, buvid, IP-derived oi and signed tokens, and the
@@ -1012,9 +1015,7 @@
         toHost: core.hostOf(item.url)
       };
     })).slice(-50);
-    if (state.status === "idle") {
-      state.status = "smooth";
-    }
+    state.status = "smooth";
     renderStatus();
   }
 
@@ -1581,7 +1582,7 @@
       // made a cache hit indistinguishable from "never probed" in diagnostics,
       // which is how a stale mainland-first ranking went unnoticed.
       state.probedAt = new Date(cached.at).toISOString();
-      state.status = "smooth";
+      state.status = "cached";
       renderStatus();
       return;
     }
@@ -1606,7 +1607,7 @@
           applyRanking(ranking);
           saveRanking(ranking);
           state.probedAt = new Date().toISOString();
-          state.status = "smooth";
+          state.status = "ready";
           renderStatus();
         }
       })
@@ -1730,7 +1731,21 @@
     if (state.status === "buffering") {
       state.status = "smooth";
       renderStatus();
+    } else if (["checking", "cached", "ready"].indexOf(state.status) !== -1 &&
+        state.rewriteCount === state.videoRewriteBaseline) {
+      state.status = "monitoring";
+      renderStatus();
     }
+  }
+
+  function beginVideoCheck() {
+    state.videoRewriteBaseline = state.rewriteCount;
+    state.lastVerifiedHost = null;
+    state.status = config.enabled ? "checking" : "off";
+    renderStatus();
+    // Let loadedmetadata settle first; the newest Resource Timing entry then
+    // belongs to the video that has just been selected rather than the old one.
+    setTimeout(discoverExistingMediaSample, 0);
   }
 
   function onVisibilityChange() {
@@ -1762,6 +1777,9 @@
       return;
     }
     watchedVideo = video;
+    beginVideoCheck();
+    video.addEventListener("emptied", beginVideoCheck, { passive: true });
+    video.addEventListener("loadedmetadata", discoverExistingMediaSample, { passive: true });
     video.addEventListener("waiting", onWaiting, { passive: true });
     video.addEventListener("stalled", onWaiting, { passive: true });
     video.addEventListener("playing", onPlaying, { passive: true });
@@ -2235,7 +2253,11 @@
       status: {
         off: ["Acceleration off", "Turn it on to speed up slow videos"],
         idle: ["Ready", "Open a video and it'll kick in"],
+        checking: ["Checking this video…", "Waiting for its media connection"],
         optimizing: ["Finding the fastest server…", "Picking the best route for you"],
+        cached: ["Fastest route cached", "Waiting to verify this video's connection"],
+        ready: ["Fastest server found", "Ready to use it when this video needs it"],
+        monitoring: ["Current route looks good", "Monitoring this video for slow connections"],
         buffering: ["Finding a faster server…", "Recovering from a slow connection"],
         smooth: ["Playing smoothly", "Connected to the fastest server near you"]
       },
@@ -2274,7 +2296,11 @@
       status: {
         off: ["已关闭加速", "打开后自动为慢视频提速"],
         idle: ["就绪", "打开视频后自动生效"],
+        checking: ["正在检查当前视频线路…", "等待捕获这个视频的媒体连接"],
         optimizing: ["正在寻找最快的服务器…", "正在为你挑选最佳线路"],
+        cached: ["已读取最快线路缓存", "等待确认当前视频是否使用该线路"],
+        ready: ["已找到最快的服务器", "当前视频需要切线时将自动使用"],
+        monitoring: ["当前线路正常", "正在持续监测这个视频的连接"],
         buffering: ["正在切换更快的服务器…", "正在从卡顿中恢复"],
         smooth: ["播放流畅", "已连接到离你最近的最快服务器"]
       },
@@ -2519,7 +2545,8 @@
       word.textContent = info[0];
     }
     if (note) {
-      note.textContent = info[1];
+      note.textContent = info[1] +
+        (key === "smooth" && state.lastVerifiedHost ? " · " + state.lastVerifiedHost : "");
     }
     if (count) {
       count.textContent = strings.count(state.rewriteCount);
