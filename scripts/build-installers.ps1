@@ -31,6 +31,9 @@ function New-IExpressPackage {
 
     $outputPath = Join-Path $outputDir $OutputName
     $sedPath = Join-Path $stagingDir "$Mode.sed"
+    if (Test-Path -LiteralPath $outputPath) {
+        Remove-Item -LiteralPath $outputPath -Force
+    }
     $fileLines = for ($index = 0; $index -lt $files.Count; $index++) {
         "FILE$index=`"$($files[$index].Name)`""
     }

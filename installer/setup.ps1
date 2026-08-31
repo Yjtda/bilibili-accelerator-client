@@ -4,6 +4,18 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Windows.Forms
+
+trap {
+    $message = "Bilibili Accelerator 安装失败。`r`n`r`n$($_.Exception.Message)"
+    [System.Windows.Forms.MessageBox]::Show(
+        $message,
+        'Bilibili Accelerator 安装程序',
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Error
+    ) | Out-Null
+    exit 1
+}
 
 function Test-Administrator {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -27,6 +39,14 @@ $installDir = Join-Path $env:LOCALAPPDATA 'Programs\Bilibili Accelerator Client'
 $backupRoot = Join-Path $env:PROGRAMDATA 'Bilibili Accelerator Client\Shortcut Backups'
 $acceleratorExe = Join-Path $installDir 'Bilibili Accelerator Client.exe'
 $officialDownload = 'https://dl.hdslb.com/mobile/fixed/bili_win/bili_win-install.exe'
+
+# Close previous launcher/client instances so the installed executable and
+# shortcuts cannot remain bound to an older build after an upgrade.
+Get-Process -Name 'Bilibili Accelerator Client' -ErrorAction SilentlyContinue |
+    Stop-Process -Force -ErrorAction SilentlyContinue
+Get-Process -Name '哔哩哔哩' -ErrorAction SilentlyContinue |
+    Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 500
 
 New-Item -ItemType Directory -Path $installDir -Force | Out-Null
 New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
@@ -124,3 +144,9 @@ Write-Host ''
 Write-Host '安装完成。桌面和开始菜单中的“哔哩哔哩”现在会自动启动 Accelerator。'
 Write-Host "原快捷方式备份：$backupDir"
 
+[System.Windows.Forms.MessageBox]::Show(
+    "安装完成。`r`n`r`n桌面和开始菜单中的哔哩哔哩现在会自动启动 Accelerator。`r`n原快捷方式备份：$backupDir",
+    'Bilibili Accelerator 安装程序',
+    [System.Windows.Forms.MessageBoxButtons]::OK,
+    [System.Windows.Forms.MessageBoxIcon]::Information
+) | Out-Null
