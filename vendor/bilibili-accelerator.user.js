@@ -1581,6 +1581,7 @@
       // made a cache hit indistinguishable from "never probed" in diagnostics,
       // which is how a stale mainland-first ranking went unnoticed.
       state.probedAt = new Date(cached.at).toISOString();
+      state.status = "smooth";
       renderStatus();
       return;
     }
@@ -1610,6 +1611,32 @@
         }
       })
       .catch(function () {});
+  }
+
+  // The desktop client injector attaches after player.html has already made its
+  // initial playurl request. Recover a media URL from the Resource Timing buffer
+  // so auto selection still performs a real probe and reports progress in the UI.
+  function discoverExistingMediaSample() {
+    if (probed || config.selection !== "auto" || !root.performance ||
+        typeof root.performance.getEntriesByType !== "function") {
+      return false;
+    }
+    let entries;
+    try {
+      entries = root.performance.getEntriesByType("resource");
+    } catch (_) {
+      return false;
+    }
+    for (let i = entries.length - 1; i >= 0; i -= 1) {
+      const candidate = entries[i] && entries[i].name;
+      if (typeof candidate === "string" &&
+          /\.(m4s|mp4|flv|m3u8)(?:$|[?#])/i.test(candidate) &&
+          core.hasMediaSignal(candidate)) {
+        scheduleProbe(candidate);
+        return true;
+      }
+    }
+    return false;
   }
 
   // Walk the ranked pool one step per stall, wrapping at the end. Taking the
@@ -1731,6 +1758,7 @@
   function watchVideo() {
     const video = document.querySelector("video");
     if (!video || video === watchedVideo) {
+      discoverExistingMediaSample();
       return;
     }
     watchedVideo = video;
@@ -1738,6 +1766,7 @@
     video.addEventListener("stalled", onWaiting, { passive: true });
     video.addEventListener("playing", onPlaying, { passive: true });
     video.addEventListener("canplay", onPlaying, { passive: true });
+    discoverExistingMediaSample();
   }
 
   // ---- diagnostics --------------------------------------------------------
@@ -2948,5 +2977,4 @@
 
   console.info("[BiliAccelerator] installed", root.BiliAccelerator.getConfig());
 })(typeof globalThis !== "undefined" ? globalThis : window);
-
 
